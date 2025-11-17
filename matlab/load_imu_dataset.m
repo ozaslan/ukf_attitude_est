@@ -41,13 +41,21 @@ if nargin >= 5 && ~isempty(field_map)
     mag_data  = raw.(field_map.mag);
     t         = raw.(field_map.t);
 else
-    acc_data  = select_field(raw, {'acc', 'accel', 'accelerometer'});
-    gyro_data = select_field(raw, {'gyro', 'gyr'});
-    mag_data  = select_field(raw, {'mag', 'magn', 'magnet'});
-    t         = select_field(raw, {'time', 't', 'timestamp'});
+    % Default field names based on the published dataset reference script.
+    acc_data  = select_field(raw, {'sensacc', 'acc', 'accel', 'accelerometer'});
+    gyro_data = select_field(raw, {'sensgyro', 'gyro', 'gyr'});
+    mag_data  = select_field(raw, {'sensmag', 'mag', 'magn', 'magnet'});
+    t         = select_field(raw, {'matlabtime', 'time', 't', 'timestamp'});
 end
 
 [acc_data, gyro_data, mag_data, t] = normalize_shapes(acc_data, gyro_data, mag_data, t);
+[acc_data, gyro_data, mag_data] = align_to_abb_axes(sensor, acc_data, gyro_data, mag_data);
+
+% Unit conversions based on dataset documentation.
+% - Accelerometer: g -> m/s^2
+% - Gyroscope    : deg/s -> rad/s
+acc_data  = acc_data * 9.81;
+gyro_data = deg2rad(gyro_data);
 
 meta = struct('path', mat_file, 'velocity', velocity, 'sequence', sequence, ...
     'sensor', sensor);
@@ -148,5 +156,54 @@ if ismatrix(data)
     elseif size(data, 2) == 3
         data = data';
     end
+end
+end
+
+function [acc_data, gyro_data, mag_data] = align_to_abb_axes(sensor, acc_data, gyro_data, mag_data)
+%ALIGN_TO_ABB_AXES Align sensor axes to the ABB robot frame as in reference script.
+% The dataset documentation provides explicit re-orderings per sensor type.
+
+sensor = upper(sensor);
+
+switch sensor
+    case 'MPU9150'
+        % magx = ABBy, magy = ABBx, magz = -ABBz
+        aux = mag_data(1,:);
+        mag_data(1,:) = mag_data(2,:);
+        mag_data(2,:) = aux;
+        mag_data(3,:) = -mag_data(3,:);
+
+    case 'MPU6050RM3100'
+        % magx = -ABBy, magy = ABBx, magz = -ABBz
+        aux = mag_data(1,:);
+        mag_data(1,:) = -mag_data(2,:);
+        mag_data(2,:) = -aux;
+        mag_data(3,:) = -mag_data(3,:);
+
+    case 'MPU6500RM3100'
+        % magx = -ABBy, magy = ABBx, magz = -ABBz
+        aux = mag_data(1,:);
+        mag_data(1,:) = -mag_data(2,:);
+        mag_data(2,:) = -aux;
+        mag_data(3,:) = -mag_data(3,:);
+
+    case 'LSM9DS0'
+        % gyrox = ABBy, gyroy = -ABBx; accx = ABBy, accy = -ABBx
+        aux = gyro_data(1,:);
+        gyro_data(1,:) = -gyro_data(2,:);
+        gyro_data(2,:) = aux;
+
+        aux = acc_data(1,:);
+        acc_data(1,:) = -acc_data(2,:);
+        acc_data(2,:) = aux;
+
+        % magx = ABBy, magy = -ABBx, magz = -ABBz
+        aux = mag_data(1,:);
+        mag_data(1,:) = -mag_data(2,:);
+        mag_data(2,:) = aux;
+        mag_data(3,:) = -mag_data(3,:);
+
+    otherwise
+        % No additional alignment needed.
 end
 end
