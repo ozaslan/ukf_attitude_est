@@ -29,6 +29,12 @@ if nargin < 4
     error('Provide dataset_root, velocity, sequence, and sensor parameters.');
 end
 
+allowed_sensors = allowed_sensor_names();
+if ~is_allowed_sensor(sensor, allowed_sensors)
+    error(['Unsupported sensor "' sensor '". ', ...
+        'Allowed sensors: ' strjoin(allowed_sensors, ', '), '.']);
+end
+
 inventory = dataset_inventory(dataset_root);
 mat_file = resolve_dataset_path(inventory, dataset_root, velocity, sequence, sensor);
 
@@ -41,15 +47,17 @@ if nargin >= 5 && ~isempty(field_map)
     mag_data  = raw.(field_map.mag);
     t         = raw.(field_map.t);
 else
-    % Default field names based on the published dataset reference script.
-    acc_data  = select_field(raw, {'sensacc', 'acc', 'accel', 'accelerometer'});
-    gyro_data = select_field(raw, {'sensgyro', 'gyro', 'gyr'});
-    mag_data  = select_field(raw, {'sensmag', 'mag', 'magn', 'magnet'});
-    t         = select_field(raw, {'matlabtime', 'time', 't', 'timestamp'});
+    % Default field names constrained to dataset definitions.
+    acc_data  = select_field(raw, {'sensacc'});
+    gyro_data = select_field(raw, {'sensgyro'});
+    mag_data  = select_field(raw, {'sensmag'});
+    t         = select_field(raw, {'matlabtime'});
 end
 
 [acc_data, gyro_data, mag_data, t] = normalize_shapes(acc_data, gyro_data, mag_data, t);
 [acc_data, gyro_data, mag_data] = align_to_abb_axes(sensor, acc_data, gyro_data, mag_data);
+
+abb_quaternion = select_field(raw, {'abbquaternion'});
 
 % Unit conversions based on dataset documentation.
 % - Accelerometer: g -> m/s^2
@@ -58,7 +66,7 @@ acc_data  = acc_data * 9.81;
 gyro_data = deg2rad(gyro_data);
 
 meta = struct('path', mat_file, 'velocity', velocity, 'sequence', sequence, ...
-    'sensor', sensor);
+    'sensor', sensor, 'abb_quaternion', abb_quaternion);
 
 end
 
@@ -206,4 +214,19 @@ switch sensor
     otherwise
         % No additional alignment needed.
 end
+end
+
+function names = allowed_sensor_names()
+names = upper({
+    'MPU9150', ...
+    'MPU6500RM3100', ...
+    'MPU6500DMP', ...
+    'MPU6050RM3100', ...
+    'MPU6050DMP', ...
+    'LSM9DS0'
+    });
+end
+
+function tf = is_allowed_sensor(sensor_name, allowed_sensors)
+tf = any(strcmpi(sensor_name, allowed_sensors));
 end
