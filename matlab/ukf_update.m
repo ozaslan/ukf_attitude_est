@@ -14,6 +14,11 @@ m = numel(z_meas);
 X = sigma_points(x, P, lambda);
 L = size(X,2);
 
+% Ensure quaternion portion of each sigma point remains normalized
+for i = 1:L
+    X(1:4, i) = X(1:4, i) / norm(X(1:4, i));
+end
+
 % Map sigma points into measurement space
 Z = zeros(m, L);
 for i = 1:L
