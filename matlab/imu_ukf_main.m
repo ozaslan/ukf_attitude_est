@@ -8,9 +8,14 @@ function imu_ukf_main()
 %   t        : 1xN timestamps (s)
 
 % -------------------- USER: load your data here --------------------
-% Example placeholders (replace with your own):
-load('imu_data.mat', 'acc_data', 'gyro_data', 'mag_data', 't');
-% acc_data, gyro_data, mag_data: 3xN; t: 1xN
+% Select the dataset folder, speed/sequence, and sensor to load.
+dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
+selection.velocity = 'eV50p';   % top-level folder name under dataset/
+selection.sequence = 1;         % Sequencia<sequence> folder (set [] if none)
+selection.sensor = 'XSENS';     % .mat filename without extension
+
+[acc_data, gyro_data, mag_data, t] = load_imu_dataset(dataset_root, ...
+    selection.velocity, selection.sequence, selection.sensor);
 
 g = 9.81;              % gravity magnitude
 m_ref_init_len = 500;  % number of samples for initialization
