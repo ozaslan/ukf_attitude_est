@@ -1,0 +1,12 @@
+function q = quat_multiply(q1, q2)
+% QUAT_MULTIPLY  Quaternion product q = q1 ⊗ q2
+%   Both q1,q2 are [qw; qx; qy; qz]
+
+w1 = q1(1); v1 = q1(2:4);
+w2 = q2(1); v2 = q2(2:4);
+
+w = w1*w2 - dot(v1, v2);
+v = w1*v2 + w2*v1 + cross(v1, v2);
+
+q = [w; v];
+end
