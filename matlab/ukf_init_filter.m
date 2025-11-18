@@ -24,10 +24,10 @@ filter.kappa = 0;
     filter.alpha, filter.beta, filter.kappa);
 
 % Process noise (example values, tune for your IMU)
-q_var  = 1e-8;   % small quaternion process noise
-bg_var = 1e-8;
-ba_var = 1e-7;
-bm_var = 1e-7;
+q_var  = 1e-6;   % small quaternion process noise
+bg_var = 1e-6;
+ba_var = 1e-5;
+bm_var = 1e-5;
 filter.Q = diag([ q_var*ones(4,1); ...
     bg_var*ones(3,1); ...
     ba_var*ones(3,1); ...
