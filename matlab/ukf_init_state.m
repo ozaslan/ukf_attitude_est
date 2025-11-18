@@ -21,7 +21,7 @@ gy = hat_g(2);
 gz = hat_g(3);
 
 % Roll and pitch from accelerometer (yaw = 0)
-phi   = atan2(gy, -gz);                       % roll
+phi   = atan2(gy,  gz);                       % roll
 theta = atan2(-gx, sqrt(gy^2 + gz^2));        % pitch
 psi   = 0.0;                                  % yaw
 

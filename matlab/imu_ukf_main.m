@@ -10,9 +10,9 @@ function imu_ukf_main()
 % -------------------- USER: load your data here --------------------
 % Select the dataset folder, speed/sequence, and sensor to load.
 dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
-selection.velocity = 'eV50p';   % top-level folder name under dataset/
-selection.sequence = 1;         % Sequencia<sequence> folder (set [] if none)
-selection.sensor = 'MPU6500DMP'; % .mat filename without extension
+selection.velocity = 'V_300';   % top-level folder name under dataset/
+selection.sequence = 3;         % Sequencia<sequence> folder (set [] if none)
+selection.sensor = 'MPU9150'; % .mat filename without extension
 
 [acc_data, gyro_data, mag_data, abb_quaternion, t, meta] = load_imu_dataset(dataset_root, ...
     selection.velocity, selection.sequence, selection.sensor);
@@ -56,13 +56,14 @@ for k = 2:N
         z_m = mag_data(:,k);
 
         % Prediction
+        z_g = z_g .* [-1; -1; -1];
         [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
 
         % Accelerometer update
-        [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+        % [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
 
         % Magnetometer update
-        [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+        % [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
 
         if any(isnan(x(:))) || any(isnan(P(:)))
             error('UKF state or covariance became NaN at step %d.', k);

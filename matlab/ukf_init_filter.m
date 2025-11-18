@@ -59,7 +59,7 @@ end
 
 q_gt0 = normalize_quaternions(abb_quaternion(:,1));
 filter.x0 = x;
-filter.x0(1:4) = q_gt0;  % initialize orientation from ground truth
+% filter.x0(1:4) = q_gt0;  % initialize orientation from ground truth
 filter.P0 = P;
 filter.m_ref = m_ref;
 end
