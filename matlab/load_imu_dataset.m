@@ -1,7 +1,7 @@
-function [acc_data, gyro_data, mag_data, t, meta] = load_imu_dataset(dataset_root, velocity, sequence, sensor, field_map)
-%LOAD_IMU_DATASET Load accelerometer, gyroscope, magnetometer, and time data.
+function [acc_data, gyro_data, mag_data, abb_quaternion, t, meta] = load_imu_dataset(dataset_root, velocity, sequence, sensor, field_map)
+%LOAD_IMU_DATASET Load accelerometer, gyroscope, magnetometer, ABB quaternion, and time data.
 %
-%   [acc_data, gyro_data, mag_data, t, meta] = load_imu_dataset(
+%   [acc_data, gyro_data, mag_data, abb_quaternion, t, meta] = load_imu_dataset(
 %       dataset_root, velocity, sequence, sensor)
 %
 %   Arguments:
@@ -10,11 +10,13 @@ function [acc_data, gyro_data, mag_data, t, meta] = load_imu_dataset(dataset_roo
 %     sequence     : Sequence number (e.g., 1, 2, 3, 4). Set [] when the
 %                    .mat file is directly inside the velocity folder.
 %     sensor       : Sensor name (e.g., 'XSENS', 'MPU6050RM3100').
-%     field_map    : Optional struct with fields 'acc', 'gyro', 'mag', 't'
-%                    to explicitly select variables inside the .mat file.
+%     field_map    : Optional struct with fields 'acc', 'gyro', 'mag', 't',
+%                    and optionally 'abb_quaternion' to explicitly select
+%                    variables inside the .mat file.
 %
 %   Returns:
 %     acc_data, gyro_data, mag_data : 3xN arrays.
+%     abb_quaternion                : 4xN quaternion array (can be empty).
 %     t                             : 1xN time vector.
 %     meta                          : Struct describing the chosen dataset.
 %
@@ -46,18 +48,23 @@ if nargin >= 5 && ~isempty(field_map)
     gyro_data = raw.(field_map.gyro);
     mag_data  = raw.(field_map.mag);
     t         = raw.(field_map.t);
+    if isfield(field_map, 'abb_quaternion')
+        abb_quaternion = raw.(field_map.abb_quaternion);
+    else
+        abb_quaternion = select_optional_field(raw, {'abbquaternion'});
+    end
 else
     % Default field names constrained to dataset definitions.
     acc_data  = select_field(raw, {'sensacc'});
     gyro_data = select_field(raw, {'sensgyro'});
     mag_data  = select_field(raw, {'sensmag'});
     t         = select_field(raw, {'matlabtime'});
+    abb_quaternion = select_optional_field(raw, {'abbquaternion'});
 end
 
 [acc_data, gyro_data, mag_data, t] = normalize_shapes(acc_data, gyro_data, mag_data, t);
 [acc_data, gyro_data, mag_data] = align_to_abb_axes(sensor, acc_data, gyro_data, mag_data);
 
-abb_quaternion = select_field(raw, {'abbquaternion'});
 abb_quaternion = normalize_quaternion_data(abb_quaternion);
 
 % Unit conversions based on dataset documentation.
@@ -135,6 +142,27 @@ value = raw.(names{match_idx});
 
 if isstruct(value)
     % If the field itself is a struct, try to find numeric arrays within it.
+    inner_names = fieldnames(value);
+    numeric_idx = find(structfun(@(v) isnumeric(v), value), 1);
+    if ~isempty(numeric_idx)
+        value = value.(inner_names{numeric_idx});
+    end
+end
+end
+
+function value = select_optional_field(raw, candidates)
+names = fieldnames(raw);
+lower_names = lower(names);
+
+match_idx = find(matches_any(lower_names, candidates), 1);
+if isempty(match_idx)
+    value = [];
+    return;
+end
+
+value = raw.(names{match_idx});
+
+if isstruct(value)
     inner_names = fieldnames(value);
     numeric_idx = find(structfun(@(v) isnumeric(v), value), 1);
     if ~isempty(numeric_idx)
