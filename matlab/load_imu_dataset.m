@@ -62,6 +62,7 @@ else
     abb_quaternion = select_optional_field(raw, {'abbquaternion'});
 end
 
+
 [acc_data, gyro_data, mag_data, t] = normalize_shapes(acc_data, gyro_data, mag_data, t);
 [acc_data, gyro_data, mag_data] = align_to_abb_axes(sensor, acc_data, gyro_data, mag_data);
 
@@ -72,6 +73,9 @@ abb_quaternion = normalize_quaternion_data(abb_quaternion);
 % - Gyroscope    : sensor-dependent (convert to rad/s for all filters)
 acc_data  = acc_data * 9.81;
 gyro_data = convert_gyro_units(sensor, gyro_data);
+
+[acc_data, gyro_data, mag_data, t, abb_quaternion] = remove_nan_timesteps( ...
+    acc_data, gyro_data, mag_data, t, abb_quaternion);
 
 meta = struct('path', mat_file, 'velocity', velocity, 'sequence', sequence, ...
     'sensor', sensor, 'abb_quaternion', abb_quaternion);
@@ -267,6 +271,44 @@ switch sensor_upper
     otherwise
         % Convert deg/s measurements to rad/s for filter consistency.
         gyro_data = deg2rad(gyro_data);
+end
+end
+
+function [acc_data, gyro_data, mag_data, t, abb_quaternion] = remove_nan_timesteps( ...
+    acc_data, gyro_data, mag_data, t, abb_quaternion)
+%REMOVE_NAN_TIMESTEPS Drop samples that contain NaNs in any sensor stream.
+
+num_samples = numel(t);
+valid_acc = all(isfinite(acc_data), 1);
+valid_gyro = all(isfinite(gyro_data), 1);
+valid_mag = all(isfinite(mag_data), 1);
+valid_t = isfinite(t);
+
+valid_mask = valid_acc & valid_gyro & valid_mag & valid_t;
+
+abb_matches_length = ~isempty(abb_quaternion) && size(abb_quaternion, 2) == num_samples;
+if abb_matches_length
+    valid_abb = all(isfinite(abb_quaternion), 1);
+    valid_mask = valid_mask & valid_abb;
+end
+
+removed_samples = num_samples - nnz(valid_mask);
+
+if removed_samples > 0
+    acc_data = acc_data(:, valid_mask);
+    gyro_data = gyro_data(:, valid_mask);
+    mag_data = mag_data(:, valid_mask);
+    t = t(valid_mask);
+
+    if abb_matches_length
+        abb_quaternion = abb_quaternion(:, valid_mask);
+    elseif ~isempty(abb_quaternion)
+        warning(['ABB quaternion samples (%d) do not match IMU samples (%d); ', ...
+            'skipping NaN-based removal for ABB ground truth.'], ...
+            size(abb_quaternion, 2), num_samples);
+    end
+
+    warning('Removed %d samples containing NaNs across sensors.', removed_samples);
 end
 end
 

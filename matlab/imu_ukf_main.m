@@ -55,15 +55,33 @@ for k = 2:N
         z_a = acc_data(:,k);
         z_m = mag_data(:,k);
 
+        if ~isfinite(dt)
+            warning('Skipping step %d due to NaN or Inf timestamp.', k);
+            x_hist(:,k) = x;
+            continue;
+        end
+
         % Prediction
-        z_g = z_g .* [-1; -1; -1];
-        [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
+        if all(isfinite(z_g))
+            z_g = z_g .* [-1; -1; -1];
+            [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
+        else
+            warning('Skipping prediction at step %d due to NaN gyroscope data.', k);
+        end
 
         % Accelerometer update
-        % [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+        if all(isfinite(z_a))
+            % [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+        else
+            warning('Skipping accelerometer update at step %d due to NaN data.', k);
+        end
 
         % Magnetometer update
-        % [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+        if all(isfinite(z_m))
+            % [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+        else
+            warning('Skipping magnetometer update at step %d due to NaN data.', k);
+        end
 
         if any(isnan(x(:))) || any(isnan(P(:)))
             error('UKF state or covariance became NaN at step %d.', k);
