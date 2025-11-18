@@ -12,7 +12,7 @@ function imu_ukf_main()
 dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
 selection.velocity = 'eV50p';   % top-level folder name under dataset/
 selection.sequence = 1;         % Sequencia<sequence> folder (set [] if none)
-selection.sensor = 'XSENS';     % .mat filename without extension
+selection.sensor = 'MPU6500DMP'; % .mat filename without extension
 
 [acc_data, gyro_data, mag_data, t] = load_imu_dataset(dataset_root, ...
     selection.velocity, selection.sequence, selection.sensor);
@@ -22,7 +22,7 @@ m_ref_init_len = 500;  % number of samples for initialization
 
 % -------------------- UKF parameters --------------------
 n = 13;           % state dimension
-alpha = 1e-3;
+alpha = 0.3;      % spread parameter (keeps n+lambda well-conditioned)
 beta  = 2;
 kappa = 0;
 
