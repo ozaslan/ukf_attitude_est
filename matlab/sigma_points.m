@@ -8,7 +8,23 @@ X = zeros(n, 2*n+1);
 X(:,1) = x;
 
 % Scaled square-root of covariance
-S = chol((n + lambda) * P, 'lower');
+P = (P + P.') / 2;
+scale = (n + lambda) * P;
+
+try
+    S = chol(scale, 'lower');
+catch ME
+    % Retry with a small diagonal jitter to enforce positive definiteness
+    jitter = max(eps(max(diag(scale))), 1e-9);
+    scale_jittered = (scale + jitter * eye(n));
+    scale_jittered = (scale_jittered + scale_jittered.') / 2;
+    try
+        S = chol(scale_jittered, 'lower');
+    catch cholME
+        throw(addCause(MException('ukf:sigma_points', ...
+            'Covariance not positive definite for sigma point generation'), cholME));
+    end
+end
 
 for i = 1:n
     X(:,i+1)    = x + S(:,i);

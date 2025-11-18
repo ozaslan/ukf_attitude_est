@@ -12,6 +12,7 @@ try
     m = numel(z_meas);
 
     % Sigma points from (x,P)
+    P = (P + P.') / 2;
     X = sigma_points(x, P, lambda);
     L = size(X,2);
 
@@ -50,6 +51,7 @@ try
     innov = z_meas - z_pred;
     x_upd = x + K * innov;
     P_upd = P - K * S * K.';
+    P_upd = (P_upd + P_upd.') / 2;
 
     % Renormalize quaternion
     x_upd(1:4) = x_upd(1:4) / norm(x_upd(1:4));
@@ -58,6 +60,6 @@ try
         error('ukf_update produced NaN values.');
     end
 catch ME
-    rethrow(addCause(MException('ukf:update', 'ukf_update failed'), ME));
+    throw(addCause(MException('ukf:update', 'ukf_update failed'), ME));
 end
 end
