@@ -75,6 +75,48 @@ classdef test_ukf_attitude_est < matlab.unittest.TestCase
             testCase.verifyEqual(norm(q), 1, 'AbsTol', 1e-12);
         end
 
+        function testRotm2EulZyxMatchesInputAngles(testCase)
+            yaw = 0.7; pitch = -0.4; roll = 0.25;
+            R = rotation_matrix_from_ypr(yaw, pitch, roll);
+
+            eul = rotm2eul_zyx(R);
+
+            testCase.verifyEqual(eul, [yaw; pitch; roll], 'AbsTol', 1e-12);
+        end
+
+        function testQuaternionsToEulerZyxRoundTrip(testCase)
+            yaw_values = [0.0, 0.45, -1.7, 2.8];
+            pitch_values = [0.1, -0.25, 0.6, -0.4];
+            roll_values = [-0.05, 0.35, -0.7, 0.9];
+            num_samples = numel(yaw_values);
+
+            q_series = zeros(4, num_samples);
+            for k = 1:num_samples
+                q_series(:, k) = euler_zyx_to_quat(yaw_values(k), pitch_values(k), roll_values(k));
+            end
+
+            eul = quaternions_to_euler_zyx(q_series);
+
+            expected = [yaw_values; pitch_values; roll_values];
+            testCase.verifyEqual(eul, expected, 'AbsTol', 1e-12);
+        end
+
+        function testQuaternionsToEulerZyxUnwrapsYawContinuously(testCase)
+            yaw_values = [pi - 0.05, -pi + 0.05];
+            num_samples = numel(yaw_values);
+
+            q_series = zeros(4, num_samples);
+            for k = 1:num_samples
+                q_series(:, k) = euler_zyx_to_quat(yaw_values(k), 0, 0);
+            end
+
+            eul = quaternions_to_euler_zyx(q_series);
+
+            expected_yaw = [pi - 0.05, pi + 0.05];
+            expected = [expected_yaw; zeros(2, num_samples)];
+            testCase.verifyEqual(eul, expected, 'AbsTol', 1e-12);
+        end
+
         function testSigmaPointsSymmetry(testCase)
             n = 3;
             alpha = 0.5;
@@ -195,4 +237,25 @@ classdef test_ukf_attitude_est < matlab.unittest.TestCase
             testCase.verifyEqual(m_ref, zeros(3,1), 'AbsTol', 1e-12);
         end
     end
+end
+
+function R = rotation_matrix_from_ypr(yaw, pitch, roll)
+Rz = [cos(yaw) -sin(yaw) 0; sin(yaw) cos(yaw) 0; 0 0 1];
+Ry = [cos(pitch) 0 sin(pitch); 0 1 0; -sin(pitch) 0 cos(pitch)];
+Rx = [1 0 0; 0 cos(roll) -sin(roll); 0 sin(roll) cos(roll)];
+R = Rz * Ry * Rx;
+end
+
+function q = euler_zyx_to_quat(yaw, pitch, roll)
+cy = cos(yaw/2); sy = sin(yaw/2);
+cp = cos(pitch/2); sp = sin(pitch/2);
+cr = cos(roll/2); sr = sin(roll/2);
+
+qw = cy*cp*cr + sy*sp*sr;
+qx = cy*cp*sr - sy*sp*cr;
+qy = cy*sp*cr + sy*cp*sr;
+qz = sy*cp*cr - cy*sp*sr;
+
+q = [qw; qx; qy; qz];
+q = q / norm(q);
 end
