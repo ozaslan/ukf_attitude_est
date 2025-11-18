@@ -45,6 +45,22 @@ classdef test_ukf_attitude_est < matlab.unittest.TestCase
             testCase.verifyEqual(R_combined, R_expected, 'AbsTol', 1e-12);
         end
 
+        function testQuatMultiplyVectorizedColumns(testCase)
+            % Mix an identity quaternion with a 90-deg Z rotation and
+            % a 90-deg X rotation in column-wise form to verify vectorization
+            q_identity = [1; 0; 0; 0];
+            q_z = [cos(pi/4); 0; 0; sin(pi/4)];
+            q_x = [cos(pi/4); sin(pi/4); 0; 0];
+
+            q_batch_left = [q_identity, q_z];
+            q_batch_right = [q_z, q_x];
+
+            result = quat_multiply(q_batch_left, q_batch_right);
+
+            testCase.verifyEqual(result(:, 1), q_z, 'AbsTol', 1e-12);
+            testCase.verifyEqual(result(:, 2), quat_multiply(q_z, q_x), 'AbsTol', 1e-12);
+        end
+
         function testRotmConversionsRoundTrip(testCase)
             yaw = 0.3; pitch = -0.2; roll = 0.1;
             Rz = [cos(yaw) -sin(yaw) 0; sin(yaw) cos(yaw) 0; 0 0 1];
