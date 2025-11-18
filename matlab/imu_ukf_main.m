@@ -95,6 +95,7 @@ for k = 1:num_samples
     % ZYX yaw-pitch-roll (for example)
     eul_est(:,k) = rotm2eul_zyx(R);
 end
+eul_est = unwrap_angles(eul_est);
 
 if isempty(q_gt)
     error('ABB quaternion ground truth not found in dataset metadata.');
@@ -105,6 +106,7 @@ eul_gt = zeros(3, num_samples);
 for k = 1:num_samples
     eul_gt(:,k) = rotm2eul_zyx(quat_to_rotm(q_gt_plot(:,k)));
 end
+eul_gt = unwrap_angles(eul_gt);
 
 figure('Name','Attitude Estimate vs ABB Ground Truth','Color','w');
 subplot(3,1,1);
@@ -171,4 +173,12 @@ end
 
 function clamped = clamp_unit(value)
 clamped = min(1, max(-1, value));
+end
+
+function unwrapped = unwrap_angles(angles)
+% Smooth cyclic angle trajectories by removing 2*pi jumps along each row
+unwrapped = angles;
+for i = 1:size(angles, 1)
+    unwrapped(i, :) = unwrap(angles(i, :));
+end
 end
