@@ -55,21 +55,31 @@ x_hist(:,1) = x;
 
 % -------------------- Main UKF loop --------------------
 for k = 2:N
-    dt  = t(k) - t(k-1);
-    z_g = gyro_data(:,k);
-    z_a = acc_data(:,k);
-    z_m = mag_data(:,k);
+    try
+        dt  = t(k) - t(k-1);
+        z_g = gyro_data(:,k);
+        z_a = acc_data(:,k);
+        z_m = mag_data(:,k);
 
-    % Prediction
-    [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
+        % Prediction
+        [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
 
-    % Accelerometer update
-    [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+        % Accelerometer update
+        [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
 
-    % Magnetometer update
-    [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+        % Magnetometer update
+        [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
 
-    x_hist(:,k) = x;
+        if any(isnan(x(:))) || any(isnan(P(:)))
+            error('UKF state or covariance became NaN at step %d.', k);
+        end
+
+        x_hist(:,k) = x;
+    catch ukfErr
+        stepError = MException('ukf:step', 'UKF update failed at step %d.', k);
+        stepError = addCause(stepError, ukfErr);
+        throw(stepError);
+    end
 end
 
 % -------------------- Example output: plot Euler angles --------------------
