@@ -39,12 +39,16 @@ end
 
 inventory = dataset_inventory(dataset_root);
 unique_sensors = unique({inventory.sensor});
+total_datasets = numel(inventory);
+processed_count = 0;
 
 noise_stats = struct('sensor', {}, 'window_size', {}, 'datasets', {}, 'aggregate', {});
 
 for s = 1:numel(unique_sensors)
     sensor_name = unique_sensors{s};
     entries = inventory(strcmp({inventory.sensor}, sensor_name));
+
+    fprintf('Processing sensor %s (%d datasets)\n', sensor_name, numel(entries));
 
     residual_acc_all = [];
     residual_gyro_all = [];
@@ -53,7 +57,13 @@ for s = 1:numel(unique_sensors)
         'acc_variance', {}, 'gyro_variance', {}, 'mag_variance', {});
 
     for k = 1:numel(entries)
+        processed_count = processed_count + 1;
+
         entry = entries(k);
+        fprintf('  Dataset %d/%d | Sensor %s %d/%d | velocity=%s, sequence=%s\n', ...
+            processed_count, total_datasets, sensor_name, k, numel(entries), ...
+            entry.velocity, entry.sequence);
+
         [acc_data, gyro_data, mag_data] = load_imu_dataset(dataset_root, ...
             entry.velocity, entry.sequence, sensor_name); %#ok<ASGLU>
 
@@ -86,10 +96,13 @@ for s = 1:numel(unique_sensors)
         'aggregate', aggregate_stats); %#ok<AGROW>
 end
 
-if ~isempty(output_path)
-    save(output_path, 'noise_stats');
-    fprintf('Saved sensor noise statistics to %s\n', output_path);
+[output_dir, ~, ~] = fileparts(output_path);
+if ~isempty(output_dir) && ~exist(output_dir, 'dir')
+    mkdir(output_dir);
 end
+
+save(output_path, 'noise_stats');
+fprintf('Saved sensor noise statistics to %s (overwriting if it existed)\n', output_path);
 
 end
 
