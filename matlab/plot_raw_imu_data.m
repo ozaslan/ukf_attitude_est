@@ -19,11 +19,12 @@ legend(component_labels, 'Location', 'best');
 title('Accelerometer');
 
 subplot(3,1,2);
-plot(t, gyro_data(1,:), 'LineWidth', 1.2, 'Color', component_colors(1,:));
+gyro_deg = rad2deg(gyro_data);
+plot(t, gyro_deg(1,:), 'LineWidth', 1.2, 'Color', component_colors(1,:));
 hold on; grid on;
-plot(t, gyro_data(2,:), 'LineWidth', 1.2, 'Color', component_colors(2,:));
-plot(t, gyro_data(3,:), 'LineWidth', 1.2, 'Color', component_colors(3,:));
-ylabel('Gyro (rad/s)');
+plot(t, gyro_deg(2,:), 'LineWidth', 1.2, 'Color', component_colors(2,:));
+plot(t, gyro_deg(3,:), 'LineWidth', 1.2, 'Color', component_colors(3,:));
+ylabel('Gyro (deg/s)');
 legend(component_labels, 'Location', 'best');
 title('Gyroscope');
 

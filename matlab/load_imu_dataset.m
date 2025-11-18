@@ -69,9 +69,9 @@ abb_quaternion = normalize_quaternion_data(abb_quaternion);
 
 % Unit conversions based on dataset documentation.
 % - Accelerometer: g -> m/s^2
-% - Gyroscope    : deg/s -> rad/s
+% - Gyroscope    : sensor-dependent (convert to rad/s for all filters)
 acc_data  = acc_data * 9.81;
-gyro_data = deg2rad(gyro_data);
+gyro_data = convert_gyro_units(sensor, gyro_data);
 
 meta = struct('path', mat_file, 'velocity', velocity, 'sequence', sequence, ...
     'sensor', sensor, 'abb_quaternion', abb_quaternion);
@@ -257,6 +257,18 @@ end
 
 function tf = is_allowed_sensor(sensor_name, allowed_sensors)
 tf = any(strcmpi(sensor_name, allowed_sensors));
+end
+
+function gyro_data = convert_gyro_units(sensor, gyro_data)
+sensor_upper = upper(sensor);
+
+switch sensor_upper
+    case 'LSM9DS0'
+        % LSM9DS0 gyroscope is already provided in rad/s.
+    otherwise
+        % Convert deg/s measurements to rad/s for filter consistency.
+        gyro_data = deg2rad(gyro_data);
+end
 end
 
 function q = normalize_quaternion_data(q)
