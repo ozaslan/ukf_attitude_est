@@ -58,6 +58,7 @@ end
 [acc_data, gyro_data, mag_data] = align_to_abb_axes(sensor, acc_data, gyro_data, mag_data);
 
 abb_quaternion = select_field(raw, {'abbquaternion'});
+abb_quaternion = normalize_quaternion_data(abb_quaternion);
 
 % Unit conversions based on dataset documentation.
 % - Accelerometer: g -> m/s^2
@@ -229,4 +230,26 @@ end
 
 function tf = is_allowed_sensor(sensor_name, allowed_sensors)
 tf = any(strcmpi(sensor_name, allowed_sensors));
+end
+
+function q = normalize_quaternion_data(q)
+if isempty(q)
+    return;
+end
+
+if ~ismatrix(q)
+    error('ABB quaternion data must be a 2-D array.');
+end
+
+if size(q, 1) == 4
+    % Already [4 x N]
+elseif size(q, 2) == 4
+    q = q';
+else
+    error('ABB quaternion data must be shaped as 4xN or Nx4.');
+end
+
+norms = vecnorm(q);
+norms(norms == 0) = 1;
+q = q ./ norms;
 end
