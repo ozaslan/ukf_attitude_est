@@ -100,9 +100,9 @@ if isempty(data)
     return;
 end
 
-smoothed = movmean(data, window_size, 2);
+smoothed = movmean(data, window_size, 2, 'omitnan');
 residuals = data - smoothed;
-variance_values = var(residuals, 0, 2);
+variance_values = var(residuals, 0, 2, 'omitnan');
 end
 
 function variance_values = aggregate_variance(residuals)
@@ -111,5 +111,5 @@ if isempty(residuals)
     return;
 end
 
-variance_values = var(residuals, 0, 2);
+variance_values = var(residuals, 0, 2, 'omitnan');
 end
