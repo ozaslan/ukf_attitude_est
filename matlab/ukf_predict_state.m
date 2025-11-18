@@ -9,6 +9,8 @@ function [x_pred, P_pred] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda)
 
     try
         n = numel(x);
+        % Ensure covariance symmetry before sigma point generation
+        P = (P + P.') / 2;
         % Sigma points from (x,P)
         X = sigma_points(x, P, lambda);
 
@@ -35,12 +37,13 @@ function [x_pred, P_pred] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda)
             P_pred = P_pred + Wc(i) * (dx * dx.');
         end
         P_pred = P_pred + Q;
+        P_pred = (P_pred + P_pred.') / 2;
 
         if any(isnan(x_pred(:))) || any(isnan(P_pred(:)))
             error('ukf_predict_state produced NaN values.');
         end
     catch ME
-        rethrow(addCause(MException('ukf:predict', ...
+        throw(addCause(MException('ukf:predict', ...
             'ukf_predict_state failed'), ME));
     end
 end
