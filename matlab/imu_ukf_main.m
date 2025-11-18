@@ -25,7 +25,7 @@ plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
 
 % -------------------- UKF parameters --------------------
 filter = ukf_init_filter(acc_data, gyro_data, mag_data, abb_quaternion, g, ...
-    m_ref_init_len);
+    m_ref_init_len, meta, dataset_root);
 n = filter.n;      % state dimension (centralized in initializer)
 
 alpha = filter.alpha;
