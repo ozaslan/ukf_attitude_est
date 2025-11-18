@@ -135,7 +135,7 @@ legend({'ABB ground truth','UKF estimate'}, 'Location', 'best');
 title('Yaw (Z-axis rotation)');
 sgtitle('UKF Attitude vs. ABB Ground Truth (ZYX yaw-pitch-roll)');
 
-angle_error = wrap_to_pi(eul_est - eul_gt);
+angle_error = unwrap_angles(wrap_to_pi(eul_est - eul_gt));
 angle_error_deg = rad2deg(angle_error);
 
 figure('Name','Euler Angle Errors','Color','w');
