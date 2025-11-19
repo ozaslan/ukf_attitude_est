@@ -49,8 +49,9 @@ P(5:7,5:7)   = eye(3) * 1e-3;  % gyro bias
 P(8:10,8:10) = eye(3) * 1e-2;  % accel bias
 P(11:13,11:13) = eye(3) * 1e-2; % mag bias
 
-% Reference magnetometer measurement in world frame: assume initial
-% body frame approximately aligned with world, so treat initial mag
-% mean as world-frame reference. If needed, you can rotate it.
-m_ref = mean_mag;   % 3x1
+% Reference magnetometer measurement expressed in world frame. The
+% measured mean is in the body frame, so rotate it using the transpose of
+% R_BW (i.e., the body-to-world rotation) to obtain the world-frame
+% reference vector.
+m_ref = R_BW' * mean_mag;   % 3x1
 end
