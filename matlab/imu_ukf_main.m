@@ -11,14 +11,14 @@ function imu_ukf_main()
 % Select the dataset folder, speed/sequence, and sensor to load.
 dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
 selection.velocity = 'V_300';   % top-level folder name under dataset/
-selection.sequence = 3;         % Sequencia<sequence> folder (set [] if none)
+selection.sequence = 1;         % Sequencia<sequence> folder (set [] if none)
 selection.sensor = 'MPU9150'; % .mat filename without extension
 
 [acc_data, gyro_data, mag_data, abb_quaternion, t, meta] = load_imu_dataset(dataset_root, ...
     selection.velocity, selection.sequence, selection.sensor);
 
 g = 9.81;              % gravity magnitude
-m_ref_init_len = 500;  % number of samples for initialization
+m_ref_init_len = 50;  % number of samples for initialization
 
 % -------------------- Plot raw sensor data --------------------
 plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
@@ -71,14 +71,14 @@ for k = 2:N
 
         % Accelerometer update
         if all(isfinite(z_a))
-            % [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+            [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
         else
             warning('Skipping accelerometer update at step %d due to NaN data.', k);
         end
 
         % Magnetometer update
         if all(isfinite(z_m))
-            % [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+            [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
         else
             warning('Skipping magnetometer update at step %d due to NaN data.', k);
         end
