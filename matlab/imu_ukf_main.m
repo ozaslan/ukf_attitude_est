@@ -54,6 +54,8 @@ m_ref = filter.m_ref;
 N = size(acc_data, 2);
 x_hist = zeros(n, N);
 x_hist(:,1) = x;
+P_diag_hist = zeros(n, N);
+P_diag_hist(:,1) = diag(P);
 
 % -------------------- Main UKF loop --------------------
 for k = 2:N
@@ -95,12 +97,16 @@ for k = 2:N
         end
 
         x_hist(:,k) = x;
+        P_diag_hist(:,k) = diag(P);
     catch ukfErr
         stepError = MException('ukf:step', 'UKF update failed at step %d.', k);
         stepError = addCause(stepError, ukfErr);
         throw(stepError);
     end
 end
+
+% -------------------- Covariance diagnostics --------------------
+plot_covariance_diagonals(t, P_diag_hist);
 
 % -------------------- Example output: plot Euler angles --------------------
 q_hist = x_hist(1:4, :);
