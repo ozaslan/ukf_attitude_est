@@ -174,7 +174,21 @@ classdef test_ukf_attitude_est < matlab.unittest.TestCase
 
             z_pred = h_acc(x, g);
 
-            testCase.verifyEqual(z_pred, [0; 0; -g] + ba, 'AbsTol', 1e-12);
+            testCase.verifyEqual(z_pred, [0; 0; g] + ba, 'AbsTol', 1e-12);
+        end
+
+        function testHAccUsesRotationMatrixThirdColumn(testCase)
+            g = 9.81;
+            yaw = 0.3; pitch = -0.2; roll = 0.5;
+            q = euler_zyx_to_quat(yaw, pitch, roll);
+            ba = [-0.03; 0.01; 0.02];
+            x = [q; zeros(3,1); ba; zeros(3,1)];
+
+            R = quat_to_rotm(q);
+            expected = g * R(:,3) + ba;
+            z_pred = h_acc(x, g);
+
+            testCase.verifyEqual(z_pred, expected, 'AbsTol', 1e-12);
         end
 
         function testHMagAppliesRotationAndBias(testCase)
