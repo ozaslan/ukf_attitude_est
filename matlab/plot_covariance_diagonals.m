@@ -34,7 +34,8 @@ segments = {
 
 for i = 1:numel(segments)
     seg = segments{i};
-    figure('Name', seg.title, 'NumberTitle', 'off');
+    fig = figure();
+    set(fig, 'Name', seg.title, 'NumberTitle', 'off');
     plot(time, cov_hist(seg.indices, :).');
     grid on;
     xlabel('Time (s)');
