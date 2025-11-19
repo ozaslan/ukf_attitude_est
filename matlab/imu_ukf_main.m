@@ -8,6 +8,9 @@ function imu_ukf_main()
 %   t        : 1xN timestamps (s)
 
 % -------------------- USER: load your data here --------------------
+
+close all;
+
 % Select the dataset folder, speed/sequence, and sensor to load.
 dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
 selection.velocity = 'V_300';   % top-level folder name under dataset/
@@ -75,7 +78,7 @@ for k = 2:N
 
         % Accelerometer update
         if all(isfinite(z_a))
-            % [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+            [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
         else
             warning('Skipping accelerometer update at step %d due to NaN data.', k);
         end
