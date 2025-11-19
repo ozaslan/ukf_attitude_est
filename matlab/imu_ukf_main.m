@@ -11,9 +11,14 @@ function imu_ukf_main()
 % Select the dataset folder, speed/sequence, and sensor to load.
 dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
 selection.velocity = 'V_300';   % top-level folder name under dataset/
-selection.sequence = 1;         % Sequencia<sequence> folder (set [] if none)
-selection.sensor = 'MPU9150'; % .mat filename without extension
-
+selection.sequence = 3;         % Sequencia<sequence> folder (set [] if none)
+% selection.sensor = 'MPU9150'; % .mat filename without extension
+selection.sensor = 'LSM9DS0'; % Alternatives are MPU9150, MPU6500RM3100, MPU6050RM3100, LSM9DS0
+% selection.sensor = 'MPU6500RM3100';
+% selection.sensor = 'MPU6050RM3100';
+                             
+                             
+                             
 [acc_data, gyro_data, mag_data, abb_quaternion, t, meta] = load_imu_dataset(dataset_root, ...
     selection.velocity, selection.sequence, selection.sensor);
 
@@ -63,7 +68,6 @@ for k = 2:N
 
         % Prediction
         if all(isfinite(z_g))
-            z_g = z_g .* [-1; -1; -1];
             [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
         else
             warning('Skipping prediction at step %d due to NaN gyroscope data.', k);
@@ -71,14 +75,14 @@ for k = 2:N
 
         % Accelerometer update
         if all(isfinite(z_a))
-            [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+            % [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
         else
             warning('Skipping accelerometer update at step %d due to NaN data.', k);
         end
 
         % Magnetometer update
         if all(isfinite(z_m))
-            [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+            % [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
         else
             warning('Skipping magnetometer update at step %d due to NaN data.', k);
         end
@@ -98,7 +102,7 @@ end
 % -------------------- Example output: plot Euler angles --------------------
 q_hist = x_hist(1:4, :);
 num_samples = N;
-q_gt = abb_quaternion;
+q_gt = quat_conjugate(abb_quaternion);
 
 if ~isempty(q_gt)
     num_samples = min(size(q_gt, 2), N);
