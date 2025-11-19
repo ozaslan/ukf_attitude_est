@@ -4,8 +4,8 @@ function plot_covariance_diagonals(t, P_diag_hist)
 %   t            : 1xN time vector
 %   P_diag_hist  : 13xN history of covariance diagonal entries
 %
-% Generates four separate figures for quaternion, gyro bias, accel bias,
-% and magnetometer bias covariance elements.
+% Generates a single figure with subplots for quaternion, gyro bias, accel
+% bias, and magnetometer bias covariance elements.
 
 if nargin < 2 || isempty(P_diag_hist)
     warning('No covariance history provided to plot_covariance_diagonals.');
@@ -18,8 +18,9 @@ if size(P_diag_hist, 2) ~= numel(t)
 end
 
 num_samples = min(size(P_diag_hist, 2), numel(t));
-time = t(1:num_samples);
+time = reshape(t(1:num_samples), 1, []);
 cov_hist = P_diag_hist(:, 1:num_samples);
+cov_hist = reshape(cov_hist, size(P_diag_hist, 1), num_samples);
 
 segments = {
     struct('indices', 1:4,  'title', 'Quaternion Covariance Diagonals', ...
@@ -32,15 +33,29 @@ segments = {
            'labels', {'b_{mx}','b_{my}','b_{mz}'}) ...
 };
 
+fig = figure('Name', 'State Covariance Diagonals', 'NumberTitle', 'off');
+tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+
+num_states = size(cov_hist, 1);
+
 for i = 1:numel(segments)
     seg = segments{i};
-    fig = figure();
-    set(fig, 'Name', seg.title, 'NumberTitle', 'off');
-    plot(time, cov_hist(seg.indices, :).');
+    valid_idx = seg.indices(seg.indices <= num_states);
+    nexttile;
+
+    if isempty(valid_idx)
+        axis off;
+        text(0.5, 0.5, 'No data available', 'HorizontalAlignment', 'center');
+        continue;
+    end
+
+    plot(time, cov_hist(valid_idx, :).');
     grid on;
     xlabel('Time (s)');
     ylabel('Covariance');
     title(seg.title);
-    legend(seg.labels, 'Interpreter', 'tex', 'Location', 'best');
+
+    legend(seg.labels(1:numel(valid_idx)), ...
+        'Interpreter', 'tex', 'Location', 'best');
 end
 end
