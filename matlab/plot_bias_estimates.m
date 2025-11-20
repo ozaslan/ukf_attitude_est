@@ -3,7 +3,7 @@ function plot_bias_estimates(t, acc_data, x_hist, g)
 %
 %   t         : 1xN time vector
 %   acc_data  : 3xN accelerometer measurements (m/s^2)
-%   x_hist    : 13xN UKF state history [q; bg; ba; bm]
+%   x_hist    : UKF state history [q; bg; ba] (and [bm] if mag enabled)
 %   g         : gravity magnitude reference (default: 9.81)
 %
 % Generates a single figure with subplots for accelerometer magnitude
@@ -38,7 +38,11 @@ component_labels = {'X', 'Y', 'Z'};
 
 acc_bias = state_hist(8:10, :);
 gyro_bias = state_hist(5:7, :);
-mag_bias = state_hist(11:13, :);
+has_mag_bias = size(state_hist, 1) >= 13;
+mag_bias = [];
+if has_mag_bias
+    mag_bias = state_hist(11:13, :);
+end
 
 acc_magnitude_raw = vecnorm(acc_samples, 2, 1);
 acc_samples_bias_removed = acc_samples - acc_bias;
@@ -50,7 +54,11 @@ acc_mag_bias_removed_mean = movmean(acc_magnitude_bias_removed, window_size);
 
 fig = figure('Name', 'Bias Estimates and Accelerometer Magnitude', ...
     'NumberTitle', 'off', 'Color', 'w');
-layout = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
+num_tiles = 3 + has_mag_bias;  % accel mag, accel bias, gyro bias, optional mag bias
+num_columns = min(2, num_tiles);
+num_rows = ceil(num_tiles / num_columns);
+layout = tiledlayout(fig, num_rows, num_columns, ...
+    'TileSpacing', 'compact', 'Padding', 'compact');
 
 nexttile;
 plot(time, acc_magnitude_raw, 'LineWidth', 1.2, 'Color', [0.12 0.47 0.71]);
@@ -85,15 +93,17 @@ ylabel('Gyro Bias (rad/s)');
 title('Gyroscope Bias');
 legend(component_labels, 'Location', 'best');
 
-nexttile;
-plot(time, mag_bias(1,:), 'LineWidth', 1.2, 'Color', component_colors(1,:));
-hold on; grid on;
-plot(time, mag_bias(2,:), 'LineWidth', 1.2, 'Color', component_colors(2,:));
-plot(time, mag_bias(3,:), 'LineWidth', 1.2, 'Color', component_colors(3,:));
-xlabel('Time (s)');
-ylabel('Mag Bias');
-title('Magnetometer Bias');
-legend(component_labels, 'Location', 'best');
+if has_mag_bias
+    nexttile;
+    plot(time, mag_bias(1,:), 'LineWidth', 1.2, 'Color', component_colors(1,:));
+    hold on; grid on;
+    plot(time, mag_bias(2,:), 'LineWidth', 1.2, 'Color', component_colors(2,:));
+    plot(time, mag_bias(3,:), 'LineWidth', 1.2, 'Color', component_colors(3,:));
+    xlabel('Time (s)');
+    ylabel('Mag Bias');
+    title('Magnetometer Bias');
+    legend(component_labels, 'Location', 'best');
+end
 
 sgtitle(layout, 'Sensor Bias Estimates and Accelerometer Magnitude');
 end
