@@ -27,6 +27,8 @@ selection.sensor = 'LSM9DS0'; % Alternatives are MPU9150, MPU6500RM3100, MPU6050
 
 g = 9.81;              % gravity magnitude
 m_ref_init_len = 50;  % number of samples for initialization
+acc_mag_tolerance = 0.5;      % allowable deviation from gravity magnitude (m/s^2)
+acc_cov_inflation_gain = 5.0; % scales measurement covariance when |a|-g exceeds tolerance
 
 % -------------------- Plot raw sensor data --------------------
 plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
@@ -45,6 +47,8 @@ lambda = filter.lambda;
 Q = filter.Q;
 Ra = filter.Ra;
 Rm = filter.Rm;
+
+Ra_nominal = Ra;
 
 % -------------------- Initialization --------------------
 x = filter.x0;
@@ -80,6 +84,16 @@ for k = 2:N
 
         % Accelerometer update
         if all(isfinite(z_a))
+            acc_mag = norm(z_a);
+            mag_error = abs(acc_mag - g);
+
+            if mag_error > acc_mag_tolerance
+                inflation = 1 + acc_cov_inflation_gain * (mag_error / g);
+                Ra = Ra_nominal * inflation;
+            else
+                Ra = Ra_nominal;
+            end
+
             [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
         else
             warning('Skipping accelerometer update at step %d due to NaN data.', k);
