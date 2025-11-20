@@ -1,4 +1,4 @@
-function filter = ukf_init_filter(acc_data, gyro_data, mag_data, abb_quaternion, g, m_ref_init_len, meta, dataset_root)
+function filter = ukf_init_filter(acc_data, gyro_data, mag_data, abb_quaternion, g, m_ref_init_len, meta, dataset_root, mag_enabled)
 %UKF_INIT_FILTER Configure UKF parameters and initial state.
 %
 %   acc_data       : 3xN accelerometer data (m/s^2)
@@ -9,6 +9,7 @@ function filter = ukf_init_filter(acc_data, gyro_data, mag_data, abb_quaternion,
 %   m_ref_init_len : number of samples for reference mag/acc init
 %   meta           : struct returned by load_imu_dataset (used for sensor selection)
 %   dataset_root   : root of the dataset tree (used to locate sensor_noise_stats.mat)
+%   mag_enabled    : optional flag to include/exclude magnetometer states/updates
 %
 %   filter: struct containing UKF dimensions, weights, noise, and
 %           initialized state/covariance/reference fields.
@@ -25,7 +26,12 @@ if nargin < 8 || isempty(dataset_root)
     dataset_root = fullfile(fileparts(mfilename('fullpath')), '..', 'dataset');
 end
 
-filter.n = 13;               % state dimension
+if nargin < 9 || isempty(mag_enabled)
+    mag_enabled = true;
+end
+
+filter.mag_enabled = logical(mag_enabled);
+filter.n = 10 + 3 * filter.mag_enabled;  % state dimension (10 without mag bias, 13 with)
 filter.alpha = 0.3;          % spread parameter (keeps n+lambda well-conditioned)
 filter.beta = 2;
 filter.kappa = 0;
@@ -36,22 +42,29 @@ filter.kappa = 0;
 noise_stats = load_noise_statistics(dataset_root, meta);
 
 % Process noise derived from sensor noise statistics
-[q_var, bg_var, ba_var, bm_var] = derive_process_noise(noise_stats);
+[q_var, bg_var, ba_var, bm_var] = derive_process_noise(noise_stats, filter.mag_enabled);
 filter.Q = diag([ q_var*ones(4,1); ...
     bg_var*ones(3,1) / 300; ...
-    ba_var*ones(3,1) / 100; ...
-    bm_var*ones(3,1) ]);
+    ba_var*ones(3,1) / 100 ]);
+
+if filter.mag_enabled
+    filter.Q = blkdiag(filter.Q, diag(bm_var*ones(3,1)));
+end
 
 % Measurement noise covariances (per-axis)
 filter.Ra = diag(select_variance(noise_stats, 'acc'));
-filter.Rm = diag(select_variance(noise_stats, 'mag'));
+if filter.mag_enabled
+    filter.Rm = diag(select_variance(noise_stats, 'mag'));
+else
+    filter.Rm = [];
+end
 
 % -------------------- Initialization --------------------
 acc_init  = acc_data(:,1:m_ref_init_len);
 gyro_init = gyro_data(:,1:m_ref_init_len);
 mag_init  = mag_data(:,1:m_ref_init_len);
 
-[x, P, m_ref] = ukf_init_state(acc_init, gyro_init, mag_init, g);
+[x, P, m_ref] = ukf_init_state(acc_init, gyro_init, mag_init, g, filter.mag_enabled);
 
 if isempty(abb_quaternion)
     error('Ground truth ABB quaternion is required to initialize the filter state.');
@@ -116,10 +129,14 @@ if isempty(vars)
 end
 end
 
-function [q_var, bg_var, ba_var, bm_var] = derive_process_noise(noise_stats)
+function [q_var, bg_var, ba_var, bm_var] = derive_process_noise(noise_stats, mag_enabled)
 gyro_var = select_variance(noise_stats, 'gyro');
 acc_var = select_variance(noise_stats, 'acc');
-mag_var = select_variance(noise_stats, 'mag');
+if mag_enabled
+    mag_var = select_variance(noise_stats, 'mag');
+else
+    mag_var = nan(3,1);
+end
 
 q_var = mean(gyro_var, 'omitnan');
 if isnan(q_var)
@@ -138,7 +155,7 @@ end
 
 bm_var = mean(mag_var, 'omitnan');
 if isnan(bm_var)
-    bm_var = 1e-5;
+    bm_var = 0;
 end
 end
 

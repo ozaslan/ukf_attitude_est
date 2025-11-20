@@ -4,6 +4,10 @@ function z_pred = h_mag(x, m_ref)
 %   z_pred = R(q)*m_ref + b_m
 
 try
+    if numel(x) < 13
+        error('h_mag requires magnetometer bias states (mag_enabled=true).');
+    end
+
     q  = x(1:4);
     bm = x(11:13);
 

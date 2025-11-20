@@ -1,7 +1,7 @@
 function x_next = f_state(x, z_g, dt)
 % F_STATE  Process model: quaternion propagated by gyro, biases random walk
 %
-%   x    : 13x1 state vector [q; bg; ba; bm]
+%   x    : 10x1 state vector [q; bg; ba] (mag disabled) or 13x1 [q; bg; ba; bm]
 %   z_g  : 3x1 gyro measurement
 %   dt   : time step
 
@@ -9,7 +9,13 @@ function x_next = f_state(x, z_g, dt)
 q  = x(1:4);       % [qw; qx; qy; qz]
 bg = x(5:7);
 ba = x(8:10);
-bm = x(11:13);
+
+has_mag = numel(x) >= 13;
+if has_mag
+    bm = x(11:13);
+else
+    bm = [];
+end
 
 % Bias-compensated angular velocity
 omega = z_g - bg;
@@ -31,8 +37,12 @@ q_next = q_next / norm(q_next);
 % Biases: mean stays the same (random walk)
 bg_next = bg;
 ba_next = ba;
-bm_next = bm;
 
-x_next = [q_next; bg_next; ba_next; bm_next];
+x_next = [q_next; bg_next; ba_next];
+
+if has_mag
+    bm_next = bm;
+    x_next = [x_next; bm_next];
+end
 
 end
