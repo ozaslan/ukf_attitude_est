@@ -108,6 +108,9 @@ end
 % -------------------- Covariance diagnostics --------------------
 plot_covariance_diagonals(t, P_diag_hist);
 
+% -------------------- Bias and magnitude visualization --------------------
+plot_bias_estimates(t, acc_data, x_hist, g);
+
 % -------------------- Example output: plot Euler angles --------------------
 q_hist = x_hist(1:4, :);
 num_samples = N;
