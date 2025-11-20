@@ -85,9 +85,6 @@ for k = 2:N
         z_a = acc_data(:,k);
         z_m = mag_data(:,k);
 
-        z_g = gyro_data([2,1,3],k);
-        z_g = [-1 -1 -1]' .* z_g;
-
         if ~isfinite(dt)
             warning('Skipping step %d due to NaN or Inf timestamp.', k);
             x_hist(:,k) = x;
@@ -214,8 +211,8 @@ end
 q_gt_plot = normalize_quaternions(q_gt(:,1:num_samples));
 eul_gt = quaternions_to_euler_zyx(q_gt_plot);
 
-eul_gt(2, :) = -eul_gt(2, :);
-eul_gt(1, :) = -eul_gt(1, :); % ###
+%eul_gt(2, :) = -eul_gt(2, :);
+%eul_gt(1, :) = -eul_gt(1, :); % ###
 
 tilt_eul = compute_tilt_from_accelerometer(acc_data(:, 1:num_samples));
 tilt_eul(2, :) = -tilt_eul(2, :);
