@@ -27,8 +27,16 @@ selection.sensor = 'LSM9DS0'; % Alternatives are MPU9150, MPU6500RM3100, MPU6050
 
 g = 9.81;              % gravity magnitude
 m_ref_init_len = 50;  % number of samples for initialization
-acc_mag_tolerance = 0.5;      % allowable deviation from gravity magnitude (m/s^2)
+acc_mag_tolerance = 0.5;       % allowable deviation from gravity magnitude (m/s^2)
 acc_cov_inflation_gain = 15.0; % scales measurement covariance when |a|-g exceeds tolerance
+acc_cov_inflation_max = 75.0;  % hard cap on inflation factor to avoid numerical blow-up
+
+% Accelerometer gating (reject update when magnitude is implausible).
+acc_mag_gate_enable = true;        % turn gating on/off without removing code
+acc_mag_gate_abs_min = 0.25 * g;   % reject if |a| falls below this absolute floor (m/s^2)
+acc_mag_gate_abs_max = 2.0 * g;    % reject if |a| exceeds this ceiling (m/s^2)
+acc_mag_gate_error_max = 1.5;      % reject if | |a|-g | exceeds this error (m/s^2)
+acc_gate_debug = true;             % emit warnings when a gate is triggered
 
 % -------------------- Plot raw sensor data --------------------
 plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
@@ -87,14 +95,31 @@ for k = 2:N
             acc_mag = norm(z_a);
             mag_error = abs(acc_mag - g);
 
-            if mag_error > acc_mag_tolerance
-                inflation = 1 + acc_cov_inflation_gain * (mag_error / g);
-                Ra = Ra_nominal * inflation;
-            else
-                Ra = Ra_nominal;
+            gate_triggered = false;
+            if acc_mag_gate_enable
+                gate_triggered = (acc_mag < acc_mag_gate_abs_min) || ...
+                    (acc_mag > acc_mag_gate_abs_max) || ...
+                    (mag_error > acc_mag_gate_error_max);
+
+                if gate_triggered && acc_gate_debug
+                    warning(['Skipping accelerometer update at step %d: |a|=%.3f m/s^2 ' ...
+                        '(error=%.3f) violated gate thresholds [%.3f, %.3f] or %.3f error.'], ...
+                        k, acc_mag, mag_error, acc_mag_gate_abs_min, acc_mag_gate_abs_max, ...
+                        acc_mag_gate_error_max);
+                end
             end
 
-            [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+            if ~gate_triggered
+                if mag_error > acc_mag_tolerance
+                    inflation = 1 + acc_cov_inflation_gain * (mag_error / g);
+                    inflation = min(inflation, acc_cov_inflation_max);
+                    Ra = Ra_nominal * inflation;
+                else
+                    Ra = Ra_nominal;
+                end
+
+                [x, P] = ukf_update(x, P, z_a, Ra, @h_acc, g, Wm, Wc, lambda);
+            end
         else
             warning('Skipping accelerometer update at step %d due to NaN data.', k);
         end
