@@ -43,9 +43,15 @@ noise_stats = load_noise_statistics(dataset_root, meta);
 
 % Process noise derived from sensor noise statistics
 [q_var, bg_var, ba_var, bm_var] = derive_process_noise(noise_stats, filter.mag_enabled);
-filter.Q = diag([ q_var*ones(4,1); ...
-    bg_var*ones(3,1) / 300; ...
-    ba_var*ones(3,1) / 100 ]);
+    % Slow down bias random walk so attitude errors are not immediately pushed
+    % into the bias states.  The slowdown factors effectively lengthen the bias
+    % time constant relative to the gyro-driven attitude process noise.
+    bg_slowdown = 1000;  % larger -> biases change more slowly
+    ba_slowdown = 500;
+
+    filter.Q = diag([ q_var*ones(4,1); ...
+        bg_var*ones(3,1) / bg_slowdown; ...
+        ba_var*ones(3,1) / ba_slowdown ]);
 
 if filter.mag_enabled
     filter.Q = blkdiag(filter.Q, diag(bm_var*ones(3,1)));
