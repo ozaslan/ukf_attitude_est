@@ -44,6 +44,10 @@ acc_magnitude_raw = vecnorm(acc_samples, 2, 1);
 acc_samples_bias_removed = acc_samples - acc_bias;
 acc_magnitude_bias_removed = vecnorm(acc_samples_bias_removed, 2, 1);
 
+window_size = max(1, round(0.05 * num_samples));
+acc_mag_raw_mean = movmean(acc_magnitude_raw, window_size);
+acc_mag_bias_removed_mean = movmean(acc_magnitude_bias_removed, window_size);
+
 fig = figure('Name', 'Bias Estimates and Accelerometer Magnitude', ...
     'NumberTitle', 'off', 'Color', 'w');
 layout = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
@@ -51,12 +55,15 @@ layout = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 nexttile;
 plot(time, acc_magnitude_raw, 'LineWidth', 1.2, 'Color', [0.12 0.47 0.71]);
 hold on; grid on;
+plot(time, acc_mag_raw_mean, 'LineWidth', 2, 'Color', [0.12 0.47 0.71]);
 plot(time, acc_magnitude_bias_removed, 'LineWidth', 1.2, 'Color', [0.17 0.63 0.17]);
+plot(time, acc_mag_bias_removed_mean, 'LineWidth', 2, 'Color', [0.17 0.63 0.17]);
 yline(g, '--', 'Color', [0.5 0.5 0.5], 'LineWidth', 1);
 xlabel('Time (s)');
 ylabel('Accel Magnitude (m/s^2)');
 title('Accelerometer Magnitude');
-legend({'Raw', 'Bias removed', 'Gravity'}, 'Location', 'best');
+legend({'Raw', 'Raw (mean filtered)', 'Bias removed', ...
+    'Bias removed (mean filtered)', 'Gravity'}, 'Location', 'best');
 
 nexttile;
 plot(time, acc_bias(1,:), 'LineWidth', 1.2, 'Color', component_colors(1,:));
