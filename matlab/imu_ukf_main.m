@@ -49,8 +49,9 @@ acc_gate_debug = false;             % emit warnings when a gate is triggered
 plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
 
 % -------------------- UKF parameters --------------------
+mag_enabled = true;  % set false to disable magnetometer bias/state handling entirely
 filter = ukf_init_filter(acc_data, gyro_data, mag_data, abb_quaternion, g, ...
-    m_ref_init_len, meta, dataset_root);
+    m_ref_init_len, meta, dataset_root, mag_enabled);
 n = filter.n;      % state dimension (centralized in initializer)
 
 alpha = filter.alpha;
@@ -163,10 +164,12 @@ for k = 2:N
         end
 
         % Magnetometer update
-        if all(isfinite(z_m))
-            % [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
-        else
-            warning('Skipping magnetometer update at step %d due to NaN data.', k);
+        if mag_enabled
+            if all(isfinite(z_m))
+                [x, P] = ukf_update(x, P, z_m, Rm, @h_mag, m_ref, Wm, Wc, lambda);
+            else
+                warning('Skipping magnetometer update at step %d due to NaN data.', k);
+            end
         end
 
         if any(isnan(x(:))) || any(isnan(P(:)))
