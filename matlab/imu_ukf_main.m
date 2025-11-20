@@ -215,8 +215,8 @@ eul_gt = quaternions_to_euler_zyx(q_gt_plot);
 %eul_gt(1, :) = -eul_gt(1, :); % ###
 
 tilt_eul = compute_tilt_from_accelerometer(acc_data(:, 1:num_samples));
-tilt_eul(2, :) = -tilt_eul(2, :);
-tilt_eul(1, :) = -tilt_eul(1, :);
+% tilt_eul(2, :) = -tilt_eul(2, :);
+% tilt_eul(1, :) = -tilt_eul(1, :);
 
 plot_attitude_comparison(t_plot, eul_gt, eul_est);
 plot_tilt_angle_comparison(t_plot, eul_gt, tilt_eul);
