@@ -221,7 +221,7 @@ tilt_eul = compute_tilt_from_accelerometer(acc_data(:, 1:num_samples));
 plot_attitude_comparison(t_plot, eul_gt, eul_est);
 plot_tilt_angle_comparison(t_plot, eul_gt, tilt_eul);
 
-gyro_eul = integrate_gyro_orientation(gyro_data(:, 1:num_samples), ...
+[~, gyro_eul] = integrate_gyro_orientation(gyro_data(:, 1:num_samples), ...
     t_plot, q_gt_plot(:, 1));
 plot_gyro_angle_comparison(t_plot, eul_gt, gyro_eul);
 
