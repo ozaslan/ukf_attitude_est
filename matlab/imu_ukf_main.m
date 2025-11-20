@@ -28,7 +28,7 @@ selection.sensor = 'LSM9DS0'; % Alternatives are MPU9150, MPU6500RM3100, MPU6050
 g = 9.81;              % gravity magnitude
 m_ref_init_len = 50;  % number of samples for initialization
 acc_mag_tolerance = 0.5;      % allowable deviation from gravity magnitude (m/s^2)
-acc_cov_inflation_gain = 5.0; % scales measurement covariance when |a|-g exceeds tolerance
+acc_cov_inflation_gain = 15.0; % scales measurement covariance when |a|-g exceeds tolerance
 
 % -------------------- Plot raw sensor data --------------------
 plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
