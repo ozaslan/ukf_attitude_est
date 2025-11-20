@@ -55,15 +55,15 @@ layout = tiledlayout(fig, 2, 2, 'TileSpacing', 'compact', 'Padding', 'compact');
 nexttile;
 plot(time, acc_magnitude_raw, 'LineWidth', 1.2, 'Color', [0.12 0.47 0.71]);
 hold on; grid on;
-plot(time, acc_mag_raw_mean, 'LineWidth', 2, 'Color', [0.12 0.47 0.71]);
 plot(time, acc_magnitude_bias_removed, 'LineWidth', 1.2, 'Color', [0.17 0.63 0.17]);
-plot(time, acc_mag_bias_removed_mean, 'LineWidth', 2, 'Color', [0.17 0.63 0.17]);
 yline(g, '--', 'Color', [0.5 0.5 0.5], 'LineWidth', 1);
+plot(time, acc_mag_raw_mean, 'LineWidth', 2.4, 'Color', [0.85 0.37 0.01]);
+plot(time, acc_mag_bias_removed_mean, 'LineWidth', 2.4, 'Color', [0.49 0.18 0.56]);
 xlabel('Time (s)');
 ylabel('Accel Magnitude (m/s^2)');
 title('Accelerometer Magnitude');
-legend({'Raw', 'Raw (mean filtered)', 'Bias removed', ...
-    'Bias removed (mean filtered)', 'Gravity'}, 'Location', 'best');
+legend({'Raw', 'Bias removed', 'Gravity', 'Raw (mean filtered)', ...
+    'Bias removed (mean filtered)'}, 'Location', 'best');
 
 nexttile;
 plot(time, acc_bias(1,:), 'LineWidth', 1.2, 'Color', component_colors(1,:));
