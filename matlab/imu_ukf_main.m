@@ -31,6 +31,13 @@ acc_mag_tolerance = 0.5;       % allowable deviation from gravity magnitude (m/s
 acc_cov_inflation_gain = 15.0; % scales measurement covariance when |a|-g exceeds tolerance
 acc_cov_inflation_max = 75.0;  % hard cap on inflation factor to avoid numerical blow-up
 
+% Gyroscope gating and process noise inflation (based on rotation speed)
+gyro_speed_inflation_start_deg = 50; % begin inflating noise above this speed (deg/s)
+gyro_speed_disable_deg = 75;         % treat gyro as unavailable above this speed (deg/s)
+gyro_cov_inflation_gain = 4.0;       % scales process noise beyond inflation start
+gyro_cov_inflation_max = 50.0;       % maximum inflation multiplier
+gyro_gate_debug = true;              % emit warnings for gyro gating/inflation
+
 % Accelerometer gating (reject update when magnitude is implausible).
 acc_mag_gate_enable = true;        % turn gating on/off without removing code
 acc_mag_gate_abs_min = 0.25 * g;   % reject if |a| falls below this absolute floor (m/s^2)
@@ -57,6 +64,7 @@ Ra = filter.Ra;
 Rm = filter.Rm;
 
 Ra_nominal = Ra;
+Q_nominal = Q;
 
 % -------------------- Initialization --------------------
 x = filter.x0;
@@ -83,9 +91,39 @@ for k = 2:N
             continue;
         end
 
-        % Prediction
+        % Prediction (gyro-driven) with speed-based gating/inflation
         if all(isfinite(z_g))
-            [x, P] = ukf_predict_state(x, P, Q, z_g, dt, Wm, Wc, lambda);
+            gyro_speed = norm(z_g);              % rad/s
+            gyro_speed_deg = rad2deg(gyro_speed);
+            gyro_inflation_start = deg2rad(gyro_speed_inflation_start_deg);
+            gyro_disable_thresh = deg2rad(gyro_speed_disable_deg);
+
+            gyro_gated = false;
+            Q_use = Q_nominal;
+
+            if gyro_speed > gyro_disable_thresh
+                gyro_gated = true;
+                if gyro_gate_debug
+                    warning(['Skipping prediction at step %d: |\omega|=%.2f deg/s ' ...
+                        'exceeds disable threshold %.2f deg/s. Gyro treated as unavailable.'], ...
+                        k, gyro_speed_deg, gyro_speed_disable_deg);
+                end
+            elseif gyro_speed > gyro_inflation_start
+                inflation = 1 + gyro_cov_inflation_gain * ...
+                    ((gyro_speed - gyro_inflation_start) / gyro_inflation_start);
+                inflation = min(inflation, gyro_cov_inflation_max);
+                Q_use = Q_nominal * inflation;
+
+                if gyro_gate_debug
+                    warning(['Inflating gyro process noise at step %d: |\omega|=%.2f deg/s ' ...
+                        '-> %.2fx (start %.2f deg/s).'], k, gyro_speed_deg, inflation, ...
+                        gyro_speed_inflation_start_deg);
+                end
+            end
+
+            if ~gyro_gated
+                [x, P] = ukf_predict_state(x, P, Q_use, z_g, dt, Wm, Wc, lambda);
+            end
         else
             warning('Skipping prediction at step %d due to NaN gyroscope data.', k);
         end
