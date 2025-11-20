@@ -44,7 +44,7 @@ acc_magnitude_raw = vecnorm(acc_samples, 2, 1);
 acc_samples_bias_removed = acc_samples - acc_bias;
 acc_magnitude_bias_removed = vecnorm(acc_samples_bias_removed, 2, 1);
 
-window_size = max(1, round(0.05 * num_samples));
+window_size = 33;
 acc_mag_raw_mean = movmean(acc_magnitude_raw, window_size);
 acc_mag_bias_removed_mean = movmean(acc_magnitude_bias_removed, window_size);
 
