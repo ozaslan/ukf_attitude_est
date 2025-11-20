@@ -32,18 +32,18 @@ acc_cov_inflation_gain = 15.0; % scales measurement covariance when |a|-g exceed
 acc_cov_inflation_max = 75.0;  % hard cap on inflation factor to avoid numerical blow-up
 
 % Gyroscope gating and process noise inflation (based on rotation speed)
-gyro_speed_inflation_start_deg = 50; % begin inflating noise above this speed (deg/s)
-gyro_speed_disable_deg = 75;         % treat gyro as unavailable above this speed (deg/s)
-gyro_cov_inflation_gain = 4.0;       % scales process noise beyond inflation start
+gyro_speed_inflation_start_deg = 75; % begin inflating noise above this speed (deg/s)
+gyro_speed_disable_deg = 750;         % treat gyro as unavailable above this speed (deg/s)
+gyro_cov_inflation_gain = 10.0;       % scales process noise beyond inflation start
 gyro_cov_inflation_max = 50.0;       % maximum inflation multiplier
-gyro_gate_debug = true;              % emit warnings for gyro gating/inflation
+gyro_gate_debug = false;              % emit warnings for gyro gating/inflation
 
 % Accelerometer gating (reject update when magnitude is implausible).
 acc_mag_gate_enable = true;        % turn gating on/off without removing code
 acc_mag_gate_abs_min = 0.25 * g;   % reject if |a| falls below this absolute floor (m/s^2)
 acc_mag_gate_abs_max = 2.0 * g;    % reject if |a| exceeds this ceiling (m/s^2)
 acc_mag_gate_error_max = 1.5;      % reject if | |a|-g | exceeds this error (m/s^2)
-acc_gate_debug = true;             % emit warnings when a gate is triggered
+acc_gate_debug = false;             % emit warnings when a gate is triggered
 
 % -------------------- Plot raw sensor data --------------------
 plot_raw_imu_data(t, acc_data, gyro_data, mag_data);
@@ -85,6 +85,9 @@ for k = 2:N
         z_a = acc_data(:,k);
         z_m = mag_data(:,k);
 
+        z_g = gyro_data([2,1,3],k);
+        z_g = [-1 -1 -1]' .* z_g;
+
         if ~isfinite(dt)
             warning('Skipping step %d due to NaN or Inf timestamp.', k);
             x_hist(:,k) = x;
@@ -104,7 +107,7 @@ for k = 2:N
             if gyro_speed > gyro_disable_thresh
                 gyro_gated = true;
                 if gyro_gate_debug
-                    warning(['Skipping prediction at step %d: |\omega|=%.2f deg/s ' ...
+                    warning(['Skipping prediction at step %d: |w|=%.2f deg/s ' ...
                         'exceeds disable threshold %.2f deg/s. Gyro treated as unavailable.'], ...
                         k, gyro_speed_deg, gyro_speed_disable_deg);
                 end
@@ -115,7 +118,7 @@ for k = 2:N
                 Q_use = Q_nominal * inflation;
 
                 if gyro_gate_debug
-                    warning(['Inflating gyro process noise at step %d: |\omega|=%.2f deg/s ' ...
+                    warning(['Inflating gyro process noise at step %d: |w|=%.2f deg/s ' ...
                         '-> %.2fx (start %.2f deg/s).'], k, gyro_speed_deg, inflation, ...
                         gyro_speed_inflation_start_deg);
                 end
@@ -210,6 +213,9 @@ if isempty(q_gt)
 end
 q_gt_plot = normalize_quaternions(q_gt(:,1:num_samples));
 eul_gt = quaternions_to_euler_zyx(q_gt_plot);
+
+eul_gt(2, :) = -eul_gt(2, :);
+eul_gt(1, :) = -eul_gt(1, :); % ###
 
 plot_attitude_comparison(t_plot, eul_gt, eul_est);
 
